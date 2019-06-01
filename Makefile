@@ -16,8 +16,8 @@ help:
 dev-tools: .virtualenv
 	${PIP} install -r requirements-dev.txt
 
-generate: .virtualenv
-	.virtualenv/bin/python generate.py
+generate-poster: .virtualenv
+	.virtualenv/bin/python generate-poster.py
 
 clean: ## Clean some files
 	@-rm -rf .virtualenv
