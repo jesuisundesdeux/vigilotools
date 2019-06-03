@@ -6,19 +6,16 @@ import os
 import sys
 import json
 import click
-import geopy
 import importlib
 import urllib.request
-import geopy.distance
 from tabulate import tabulate
 
 from PIL import Image, ImageDraw, ImageFont
 
-CATEGORY = 2
+
 DIST = 500
 
 VERSION = "0.0.1"
-CITYLIST = "https://vigilo-bf7f2.firebaseio.com/citylist.json"
 
 TEMPLATE = "parodie_stop_incivilite_montpellier"
 TEMPLATEDIR = f"templates"
@@ -40,31 +37,6 @@ def loadTemplate(templatename):
 # test = loadTemplate(TEMPLATE)
 # test.generate(API, ISSUE_PICTURE)
 
-def download_url(url):
-    response = urllib.request.urlopen(url)
-    data = response.read()
-    text = data.decode('utf-8')
-
-    return text
-
-
-def download_url_to_file(url, filename):
-    urllib.request.urlretrieve(url, filename)
-
-
-def get_scope_information(scopeid):
-    data = download_url(CITYLIST)
-    jcities = json.loads(data)
-
-    for key in jcities.keys():
-        if scopeid in jcities[key]['scope']:
-            jcities[key]['api_path'] = jcities[key]['api_path'].replace(
-                '%3A%2F%2F', '://')
-
-            return jcities[key]
-
-    return None
-
 
 @click.group()
 def cli():
@@ -82,6 +54,11 @@ def list():
 @click.argument('token', type=str)
 def generate(scope, template, token):
     """Generate a poster"""
+
+    test = loadTemplate(template)
+    test.set_scope(scope)
+    test.generate(token)
+    sys.exit()
 
     api_path = get_scope_information(scope)['api_path']
 
@@ -112,6 +89,7 @@ def generate(scope, template, token):
             float(i['coordinates_lat']), float(i['coordinates_lon']))
         dist = geopy.distance.distance(geopoint_issue, geopoint_search).m
         if dist <= 500:
+            # print(i['token'])
             img_filename = f"/tmp/{i['token']}.png"
             if not os.path.exists(img_filename):
                 photo_url = f"{api_path}/get_photo.php?token={i['token']}"
@@ -119,6 +97,10 @@ def generate(scope, template, token):
                 print(f"Download {img_filename}")
                 download_url_to_file(photo_url, img_filename)
             img = Image.open(img_filename)
+
+            cropped = img.crop_to_aspect(480, 480)
+            cropped.thumbnail((480, 480), Image.ANTIALIAS)
+            cropped.save(f"/tmp/thumb_{i['token']}.png")
             # list_issue.append(i)
             ratio = img.size[0] / img.size[1]
             if ratio not in list_issue['total']:
@@ -129,12 +111,16 @@ def generate(scope, template, token):
             if ratio not in list_issue:
                 list_issue[ratio] = []
 
-            list_issue[ratio].append(i['token'])
+            list_issue[ratio].append(i)
 
     s = [(k, list_issue['total'][k])
          for k in sorted(list_issue['total'], key=list_issue['total'].get, reverse=True)]
 
-    print(s)
+    topkey = s[0][0]
+    for i in list_issue[topkey]:
+        img_filename = f"/tmp/{i['token']}.png"
+        img = Image.open(img_filename)
+        print(img.size)
 
 # test = loadTemplate(templatename)
 # test.info()
