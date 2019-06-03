@@ -12,11 +12,17 @@ from PIL import Image, ImageDraw, ImageFont
 
 CITYLIST = "https://vigilo-bf7f2.firebaseio.com/citylist.json"
 CATEGORY = 2
+
 DELTAX = 30
 DELTAY = 30
+MOSAICX = 1054
+MOSAICY = 30
+MOSAICSPACE = 13
 APPROXWIDTH = 936
 APPROXHEIGHT = 446
 COLOR = (228, 6, 19)
+memidx = 0
+memidy = 0
 
 
 def downloadFile(url):
@@ -115,7 +121,11 @@ class TPLparodie_stop_incivilite_montpellier():
         cropped.thumbnail(size, Image.ANTIALIAS)
         cropped.save(img_resized)
 
+#    def draw_current_incivilite(token)
+
     def generate(self, token):
+        global memidx, memidy
+
         # Get issue information
         issue_url = f'{self.api_path}/get_issues.php?token={token}'
         data = download_url(issue_url)
@@ -164,10 +174,6 @@ class TPLparodie_stop_incivilite_montpellier():
         nblines = int(math.sqrt((count)))
         totalshow = count - (count % nblines)
         nbcols = int(totalshow / nblines)
-        print(count)
-        print(nblines)
-        print(totalshow)
-        print(nbcols)
 
         # Resize main picture
         imgsize = (int(APPROXWIDTH), int(APPROXHEIGHT))
@@ -190,85 +196,73 @@ class TPLparodie_stop_incivilite_montpellier():
         idx = 0
         for x in range(nbcols):
             for y in range(nblines):
-                print(f'x: {x} y: {y}')
+                if list_issue[ratioidx][idx]['token'] == token:
+                    memidx = x
+                    memidy = y
+
                 img_filename = f"/tmp/{list_issue[ratioidx][idx]['token']}_size_{int(stepx)}_{int(stepy)}.png"
                 thumbnail = Image.open(img_filename)
                 result.paste(
-                    thumbnail, (int(DELTAX + (x*stepx)), int(DELTAY+(y*stepy))))
+                    thumbnail, (int(MOSAICX + (x*stepx)), int(MOSAICY+(y*stepy))))
 
                 idx += 1
 
         # Draw red rectangle
         d = ImageDraw.Draw(result)
         d.rectangle(
-            ((DELTAX, DELTAY), (APPROXWIDTH+DELTAX, APPROXHEIGHT+DELTAY)), fill=None, outline=COLOR, width=8)
+            ((MOSAICX-MOSAICSPACE, MOSAICY-MOSAICSPACE), (APPROXWIDTH+MOSAICX+MOSAICSPACE, APPROXHEIGHT+MOSAICY+MOSAICSPACE)), fill=None, outline=COLOR, width=8)
 
-        result.save("/tmp/result.png")
-        # # I change brightness of the images, just to emphasise they are unique copies.
-        # im = Image.eval(im, lambda x: x+(i+j)/30)
-        # # paste the image at location i,j:
-        # new_im.paste(im, (i, j))
-
-        # for i in list_issue:
-        #     img_filename = f"/tmp/{i['token']}.png"
-        #     img = Image.open(img_filename)
-        #     print(img.size)
-
-        sys.exit()
-        data = downloadFile(f"{api}/get_issues.php?c=2")
-        issues = json.loads(data)
-        count = len(issues)
-        montant = count*135
+        # sys.exit()
+        # data = downloadFile(f"{api}/get_issues.php?c=2")
+        # issues = json.loads(data)
+        # count = len(issues)
+        # montant = count*135
 
         # Load pictures
-        background = Image.open(
-            f"{self.dir}/background_v2.png").convert("RGBA")
+
+        divisor = picture.size[1] / APPROXHEIGHT
+        newidth = int(picture.size[0]/divisor)
+        newheight = int(picture.size[1]/divisor)
+        self.download_and_resize_image(token, (newidth, newheight))
+        filename = f"/tmp/{token}_size_{newidth}_{newheight}.png"
         picture = Image.open(filename).convert("RGBA")
         smiley = Image.open(f"{self.dir}/smiley.png").convert("RGBA")
-        result = background
+        result.paste(picture, (DELTAX, DELTAY))
 
-        # Get image informations
-        dstpicture = [620, 0, 1920, 720]
-        cposx = dstpicture[0]
-        cposy = dstpicture[1]
-        cwidth = dstpicture[2] - cposx
-        cheight = dstpicture[3] - cposy
-        iwidth = picture.size[0]
-        iheight = picture.size[1]
-        isportrait = iheight > iwidth
-        ratio = iheight / float(cheight)
-
-        # Resize picture
-        if isportrait:
-            rwidth = iwidth
-            rheight = iheight
-            if ratio > 0:
-                rwidth = int(iwidth/ratio)
-                rheight = int(iheight/ratio)
-                picture = picture.resize((rwidth, rheight))
-
-        # Paste picture
-        result.paste(picture, (cposx, cposy))
+        d.rectangle(
+            ((DELTAX-MOSAICSPACE, DELTAY-MOSAICSPACE), (APPROXWIDTH+DELTAX+MOSAICSPACE, APPROXHEIGHT+DELTAY+MOSAICSPACE)), fill=None, outline=COLOR, width=8)
 
         # Add smiley
         swidth, sheight = smiley.size
         sratio = swidth / sheight
-        swidth = int(iwidth * .3)
+        swidth = int(newidth * .3)
         sheight = int(swidth / sratio)
 
-        sposx = random.randint(cposx, cposx+rwidth-swidth)
-        sposy = random.randint(cposy, cposy+rheight-sheight)
+        randx = random.randint(0, APPROXWIDTH-swidth)
+        randy = random.randint(0, APPROXHEIGHT-sheight)
         smiley = smiley.resize((swidth, sheight))
-        result.paste(smiley, (sposx, sposy), smiley)
+        result.paste(smiley, (DELTAX + randx, DELTAY+randy), smiley)
 
-        # Crop image
-        result = result.crop((0, 0, cposx+rwidth, cposy+rheight))
+        reducesmiley = smiley
+        reducesmiley = reducesmiley.resize((
+            int(swidth/nbcols), int(sheight/nblines)))
+        result.paste(reducesmiley, (MOSAICX + int((stepx*memidx)),
+                                    MOSAICY+int((stepy*memidy))), reducesmiley)
+        print(memidx)
+        print(memidy)
+
+        print(swidth)
+        print(swidth/nbcols)
+        result.save("/tmp/result.png", format="png")
+        sys.exit()
 
         # Draw text
         fnt = ImageFont.truetype(f'{self.dir}/Cantarell-Regular.otf', 40)
         d = ImageDraw.Draw(result)
-        # d.text((10,cheight-100), f"{count}eme incivilités,", font=fnt, fill=(228,6,19,255))
-        # d.text((10,cheight-50), f"soit {montant} € de contravations", font=fnt, fill=(228,6,19,255))
+        d.text((10, cheight-100),
+               f"{count}eme incivilités,", font=fnt, fill=(228, 6, 19, 255))
+        d.text((10, cheight-50),
+               f"soit {montant} € de contravations", font=fnt, fill=(228, 6, 19, 255))
 
         d.text((10, cheight-100),
                f"{count}eme incivilités,", font=fnt, fill=(30, 61, 144, 255))
@@ -276,4 +270,4 @@ class TPLparodie_stop_incivilite_montpellier():
                f"soit {montant :7,.0f} € de contravations", font=fnt, fill=(30, 61, 144, 255))
 
         # Save image
-        result.save("test.png", format="png")
+        result.save("/tmp/result.png", format="png")
