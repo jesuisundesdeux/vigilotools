@@ -13,16 +13,39 @@ from PIL import Image, ImageDraw, ImageFont
 CITYLIST = "https://vigilo-bf7f2.firebaseio.com/citylist.json"
 CATEGORY = 2
 
-DELTAX = 30
-DELTAY = 30
-MOSAICX = 1054
-MOSAICY = 30
+DELTAX = 50
+DELTAY = 230
+
+GRIDX = 1054
+GRIDY = 230
 MOSAICSPACE = 13
 APPROXWIDTH = 936
 APPROXHEIGHT = 446
 COLOR = (228, 6, 19)
-memidx = 0
-memidy = 0
+memx = 0
+memy = 0
+
+maxnbcols = 4
+maxnblines = 4
+
+PV = 135
+
+LEFTTOPTITLE = "Exemple campagne de sensibilisation de la ville"
+LEFTTOPTITLE_X = DELTAX
+LEFTTOPTITLE_Y = 30
+
+RIGHTTOPTITLE = "La réalité sur le terrain !\nUn total de {total} incivilités, soit {cout} €\nSomme qui pourrait être utilisé pour améliorer\nles infrastructures afin d'éviter que cela se reproduise"
+RIGHTTOPTITLE_X = GRIDX
+RIGHTTOPTITLE_Y = 30
+
+RIGHTBOTTOMTITLE = "{near_count} incivilités sur ce secteur, soit {near_cout} €"
+RIGHTBOTTOMTITLE_X = GRIDX
+RIGHTBOTTOMTITLE_Y = 910
+
+LEFTSTREET_X = DELTAX
+LEFTSTREET_Y = 910
+
+RIGHTITLE = "La réalité sur le terrain"
 
 
 def downloadFile(url):
@@ -120,7 +143,7 @@ class TPLparodie_stop_incivilite_montpellier():
             return
 
         # Resize picture
-        print(f"Resize image {token}")
+        print(f"Try to resize image {token} to size_{size[0]}x{size[1]}")
         img = Image.open(img_filename)
         cropped = img.crop_to_aspect(size[0], size[1])
         cropped.save(img_resized)
@@ -128,7 +151,7 @@ class TPLparodie_stop_incivilite_montpellier():
 #    def draw_current_incivilite(token)
 
     def generate(self, token):
-        global memidx, memidy
+        global memx, memy, memidx
 
         # Get issue information
         issue_url = f'{self.api_path}/get_issues.php?token={token}'
@@ -145,131 +168,115 @@ class TPLparodie_stop_incivilite_montpellier():
             raise Exception(
                 f"Category no coresponding with incivility theme")
 
+        # Select only near issues
         issues_url = f'{self.api_path}/get_issues.php?c={CATEGORY}'
         data = download_url(issues_url)
         jissues = json.loads(data)
         list_near = []
-        for i in jissues:
+        for issue in jissues:
             geopoint_search = geopy.Point(
-                float(i['coordinates_lat']), float(i['coordinates_lon']))
+                float(issue['coordinates_lat']), float(issue['coordinates_lon']))
             dist = geopy.distance.distance(geopoint_issue, geopoint_search).m
             if dist <= 500:
-                list_near.append(i)
+                self.download_and_resize_image(issue['token'])
+                list_near.append(issue)
 
-        list_issue = {"total": {}}
-        for issue in list_near:
-            self.download_and_resize_image(issue['token'])
-            filename = f"/tmp/{issue['token']}.png"
-            img = Image.open(filename)
-            ratio = img.size[0] / img.size[1]
+        near_count = len(list_near)
+        near_cout = near_count*PV
 
-            if ratio not in list_issue['total']:
-                list_issue[ratio] = []
-                list_issue['total'][ratio] = 0
-
-            list_issue[ratio].append(issue)
-            list_issue['total'][ratio] += 1
-
-        topratio = sorted(list_issue['total'].items(),
-                          key=lambda item: item[1], reverse=True)
-        ratioidx = topratio[0][0]
-
-        count = len(list_issue[ratioidx])
-        nblines = int(math.sqrt((count)))
-        totalshow = count - (count % nblines)
+        nblines = int(math.sqrt((near_count)))
+        totalshow = near_count - (near_count % nblines)
         nbcols = int(totalshow / nblines)
 
-        stepx = APPROXWIDTH/nbcols
-        stepy = APPROXHEIGHT/nblines
-        imgsize = (int(stepx), int(stepy))
-        for issue in list_issue[ratioidx]:
+        min_nbcols = min(maxnbcols, nbcols)
+        min_nblines = min(maxnblines, nblines)
+
+        stepx = int(APPROXWIDTH/min_nbcols)
+        stepy = int(APPROXHEIGHT/min_nblines)
+        imgsize = (stepx, stepy)
+        for issue in list_near:
             self.download_and_resize_image(issue['token'], imgsize)
 
-        # Resize main picture
-        boxsize = (int(APPROXWIDTH), int(APPROXHEIGHT))
-        self.download_and_resize_image(token, boxsize)
-
         # Load pictures
-        img_filename = f"/tmp/{token}_size_{int(APPROXWIDTH)}_{int(APPROXHEIGHT)}.png"
         background = Image.open(
             f"{self.dir}/background_v2.png").convert("RGBA")
-        picture = Image.open(img_filename).convert("RGBA")
-        smiley = Image.open(f"{self.dir}/smiley.png").convert("RGBA")
         result = background
 
         idx = 0
-        for x in range(nbcols):
-            for y in range(nblines):
-                if list_issue[ratioidx][idx]['token'] == token:
-                    memidx = x
-                    memidy = y
+        for x in range(min_nbcols):
+            for y in range(min_nblines):
+                if list_near[idx]['token'] == token:
+                    memx = x
+                    memy = y
 
-                img_filename = f"/tmp/{list_issue[ratioidx][idx]['token']}_size_{int(stepx)}_{int(stepy)}.png"
+                img_filename = f"/tmp/{list_near[idx]['token']}_size_{stepx}_{stepy}.png"
                 thumbnail = Image.open(img_filename)
                 result.paste(
-                    thumbnail, (int(MOSAICX + (x*stepx)), int(MOSAICY+(y*stepy))))
+                    thumbnail, (GRIDX + (x*stepx), GRIDY+(y*stepy)))
 
                 idx += 1
 
-        # Draw red rectangle
+        # Draw matrix red rectangle
         d = ImageDraw.Draw(result)
         d.rectangle(
-            ((MOSAICX-MOSAICSPACE, MOSAICY-MOSAICSPACE), (APPROXWIDTH+MOSAICX+MOSAICSPACE, APPROXHEIGHT+MOSAICY+MOSAICSPACE)), fill=None, outline=COLOR, width=8)
+            ((GRIDX-MOSAICSPACE, GRIDY-MOSAICSPACE), ((min_nbcols*stepx)+GRIDX+MOSAICSPACE, (min_nblines*stepy)+GRIDY+MOSAICSPACE)), fill=None, outline=COLOR, width=8)
 
-        # sys.exit()
-        # data = downloadFile(f"{api}/get_issues.php?c=2")
-        # issues = json.loads(data)
-        # count = len(issues)
-        # montant = count*135
-
-        # divisor = picture.size[1] / APPROXHEIGHT
-        # newidth = int(picture.size[0]/divisor)
-        # newheight = int(picture.size[1]/divisor)
-        # self.download_and_resize_image(token, (newidth, newheight))
-        filename = f"/tmp/{token}_size_{int(APPROXWIDTH)}_{int(APPROXHEIGHT)}.png"
+        # Main picture
+        boxsize = (min_nbcols*stepx, min_nblines*stepy)
+        self.download_and_resize_image(token, boxsize)
+        filename = f"/tmp/{token}_size_{min_nbcols*stepx}_{min_nblines*stepy}.png"
         picture = Image.open(filename).convert("RGBA")
         smiley = Image.open(f"{self.dir}/smiley.png").convert("RGBA")
         result.paste(picture, (DELTAX, DELTAY))
 
+        # Draw main picture red rectangle
         d.rectangle(
-            ((DELTAX-MOSAICSPACE, DELTAY-MOSAICSPACE), (APPROXWIDTH+DELTAX+MOSAICSPACE, APPROXHEIGHT+DELTAY+MOSAICSPACE)), fill=None, outline=COLOR, width=8)
+            ((DELTAX-MOSAICSPACE, DELTAY-MOSAICSPACE), (picture.size[0]+DELTAX+MOSAICSPACE, picture.size[1]+DELTAY+MOSAICSPACE)), fill=None, outline=COLOR, width=8)
 
         # Add smiley
         swidth, sheight = smiley.size
         sratio = swidth / sheight
-        swidth = int(APPROXWIDTH * .3)
+        swidth = int(picture.size[0] * .3)
         sheight = int(swidth / sratio)
 
-        randx = random.randint(0, APPROXWIDTH-swidth)
-        randy = random.randint(0, APPROXHEIGHT-sheight)
+        randx = random.randint(0, picture.size[0]-swidth)
+        randy = random.randint(0, picture.size[1]-sheight)
         smiley = smiley.resize((swidth, sheight))
         result.paste(smiley, (DELTAX + randx, DELTAY+randy), smiley)
 
         reducesmiley = smiley
         reducesmiley = reducesmiley.resize((
-            int(swidth/nbcols), int(sheight/nblines)))
-        result.paste(reducesmiley, (MOSAICX + int((stepx*memidx)),
-                                    MOSAICY+int((stepy*memidy))), reducesmiley)
-        # print(memidx)
-        # print(memidy)
-
-        # print(swidth)
-        # print(swidth/nbcols)
-        result.save("/tmp/result.png", format="png")
-        sys.exit()
+            int(swidth/min_nbcols), int(sheight/min_nblines)))
+        result.paste(reducesmiley, (GRIDX + int((stepx*memx)),
+                                    GRIDY+int((stepy*memy))), reducesmiley)
 
         # Draw text
-        fnt = ImageFont.truetype(f'{self.dir}/Cantarell-Regular.otf', 40)
+        fnt40 = ImageFont.truetype(f'{self.dir}/Cantarell-Regular.otf', 40)
         d = ImageDraw.Draw(result)
-        d.text((10, cheight-100),
-               f"{count}eme incivilités,", font=fnt, fill=(228, 6, 19, 255))
-        d.text((10, cheight-50),
-               f"soit {montant} € de contravations", font=fnt, fill=(228, 6, 19, 255))
 
-        d.text((10, cheight-100),
-               f"{count}eme incivilités,", font=fnt, fill=(30, 61, 144, 255))
-        d.text((10, cheight-50),
-               f"soit {montant :7,.0f} € de contravations", font=fnt, fill=(30, 61, 144, 255))
+        # Draw left title
+        d.text((LEFTTOPTITLE_X-MOSAICSPACE, LEFTTOPTITLE_Y), LEFTTOPTITLE,
+               font=fnt40, fill=(30, 30, 30, 255))
 
-        # Save image
+        # Draw right title
+        total = len(jissues)
+        cout = total*PV
+        compute_title = RIGHTTOPTITLE.replace('{total}', str(total))
+        compute_title = compute_title.replace(
+            '{cout}', f'{cout :7,.0f}'.replace(',', '.'))
+        d.text((RIGHTTOPTITLE_X-MOSAICSPACE, RIGHTTOPTITLE_Y), compute_title,
+               font=fnt40, fill=(30, 30, 30, 255))
+
+        # Street information
+        d.text((LEFTSTREET_X-MOSAICSPACE, LEFTSTREET_Y), f"Proche {jissue[0]['address']}",
+               font=fnt40, fill=(60, 60, 60, 255))
+
+        # Total
+        compute_title = RIGHTBOTTOMTITLE.replace(
+            '{near_count}', str(near_count))
+        compute_title = compute_title.replace(
+            '{near_cout}', f'{near_cout: 7,.0f}'.replace(',', '.'))
+        d.text((RIGHTBOTTOMTITLE_X-MOSAICSPACE, RIGHTBOTTOMTITLE_Y), compute_title,
+               font=fnt40, fill=(60, 60, 60, 255))
+
         result.save("/tmp/result.png", format="png")
