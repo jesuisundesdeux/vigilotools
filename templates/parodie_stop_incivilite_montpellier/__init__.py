@@ -33,29 +33,34 @@ def downloadFile(url):
     return text
 
 
-# Source: https://stackoverflow.com/questions/43734194/pillow-create-thumbnail-by-cropping-instead-of-preserving-aspect-ratio
+# Inpired by https://stackoverflow.com/questions/43734194/pillow-create-thumbnail-by-cropping-instead-of-preserving-aspect-ratio
 class _Image(Image.Image):
 
-    def crop_to_aspect(self, aspect, divisor=1, alignx=0.5, aligny=0.5):
-        """Crops an image to a given aspect ratio.
-        Args:
-            aspect (float): The desired aspect ratio.
-            divisor (float): Optional divisor. Allows passing in (w, h) pair as the first two arguments.
-            alignx (float): Horizontal crop alignment from 0 (left) to 1 (right)
-            aligny (float): Vertical crop alignment from 0 (left) to 1 (right)
-        Returns:
-            Image: The cropped Image object.
-        """
-        if self.width / self.height > aspect / divisor:
-            newwidth = int(self.height * (aspect / divisor))
-            newheight = self.height
-        else:
-            newwidth = self.width
-            newheight = int(self.width / (aspect / divisor))
-        img = self.crop((alignx * (self.width - newwidth),
-                         aligny * (self.height - newheight),
-                         alignx * (self.width - newwidth) + newwidth,
-                         aligny * (self.height - newheight) + newheight))
+    def crop_to_aspect(self, nwidth, nheight):
+        wratio = self.width / nwidth
+        hratio = self.height / nheight
+        ratio = max(1, min(wratio, hratio))
+
+        newwidth = self.width
+        newheight = self.height
+        if ratio > 1:
+            newwidth = int(self.width/ratio)
+            newheight = int(self.height/ratio)
+            self.thumbnail((newwidth, newheight), Image.ANTIALIAS)
+
+        cwidth = newwidth
+        cheight = newheight
+        if wratio > 1:
+            cwidth = nwidth
+
+        if hratio > 1:
+            cheight = nheight
+
+        img = self.crop((0.5 * (newwidth - cwidth),
+                         0.5 * (newheight - cheight),
+                         0.5 * (newwidth - cwidth) + cwidth,
+                         0.5 * (newheight - cheight) + cheight))
+
         return img
 
 
@@ -118,7 +123,6 @@ class TPLparodie_stop_incivilite_montpellier():
         print(f"Resize image {token}")
         img = Image.open(img_filename)
         cropped = img.crop_to_aspect(size[0], size[1])
-        cropped.thumbnail(size, Image.ANTIALIAS)
         cropped.save(img_resized)
 
 #    def draw_current_incivilite(token)
@@ -175,15 +179,15 @@ class TPLparodie_stop_incivilite_montpellier():
         totalshow = count - (count % nblines)
         nbcols = int(totalshow / nblines)
 
-        # Resize main picture
-        imgsize = (int(APPROXWIDTH), int(APPROXHEIGHT))
-        self.download_and_resize_image(token, imgsize)
-
         stepx = APPROXWIDTH/nbcols
         stepy = APPROXHEIGHT/nblines
         imgsize = (int(stepx), int(stepy))
         for issue in list_issue[ratioidx]:
             self.download_and_resize_image(issue['token'], imgsize)
+
+        # Resize main picture
+        boxsize = (int(APPROXWIDTH), int(APPROXHEIGHT))
+        self.download_and_resize_image(token, boxsize)
 
         # Load pictures
         img_filename = f"/tmp/{token}_size_{int(APPROXWIDTH)}_{int(APPROXHEIGHT)}.png"
@@ -218,13 +222,11 @@ class TPLparodie_stop_incivilite_montpellier():
         # count = len(issues)
         # montant = count*135
 
-        # Load pictures
-
-        divisor = picture.size[1] / APPROXHEIGHT
-        newidth = int(picture.size[0]/divisor)
-        newheight = int(picture.size[1]/divisor)
-        self.download_and_resize_image(token, (newidth, newheight))
-        filename = f"/tmp/{token}_size_{newidth}_{newheight}.png"
+        # divisor = picture.size[1] / APPROXHEIGHT
+        # newidth = int(picture.size[0]/divisor)
+        # newheight = int(picture.size[1]/divisor)
+        # self.download_and_resize_image(token, (newidth, newheight))
+        filename = f"/tmp/{token}_size_{int(APPROXWIDTH)}_{int(APPROXHEIGHT)}.png"
         picture = Image.open(filename).convert("RGBA")
         smiley = Image.open(f"{self.dir}/smiley.png").convert("RGBA")
         result.paste(picture, (DELTAX, DELTAY))
@@ -235,7 +237,7 @@ class TPLparodie_stop_incivilite_montpellier():
         # Add smiley
         swidth, sheight = smiley.size
         sratio = swidth / sheight
-        swidth = int(newidth * .3)
+        swidth = int(APPROXWIDTH * .3)
         sheight = int(swidth / sratio)
 
         randx = random.randint(0, APPROXWIDTH-swidth)
@@ -248,11 +250,11 @@ class TPLparodie_stop_incivilite_montpellier():
             int(swidth/nbcols), int(sheight/nblines)))
         result.paste(reducesmiley, (MOSAICX + int((stepx*memidx)),
                                     MOSAICY+int((stepy*memidy))), reducesmiley)
-        print(memidx)
-        print(memidy)
+        # print(memidx)
+        # print(memidy)
 
-        print(swidth)
-        print(swidth/nbcols)
+        # print(swidth)
+        # print(swidth/nbcols)
         result.save("/tmp/result.png", format="png")
         sys.exit()
 
