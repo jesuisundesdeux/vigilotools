@@ -1,2 +1,5 @@
 .virtualenv
 *.pyc
+__pycache__/
+
+vigilotools.egg-info/

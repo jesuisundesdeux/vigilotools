@@ -12,6 +12,9 @@ help:
 .virtualenv: ## Create Virtualenv
 	virtualenv --no-site-packages -p ${PYTHON} .virtualenv
 	${PIP} install -r requirements.txt
+	${PIP} install --editable .
+
+install: .virtualenv
 
 dev-tools: .virtualenv
 	${PIP} install -r requirements-dev.txt
