@@ -21,6 +21,6 @@ vgtool poster collage all \
 
 ## Plugins list
 
-[scope](core/scope/README.md)
-
-[poster collage](core/poster/collage/README.md)
+* [scope](core/scope/README.md)
+* [issue](core/issue/README.md)
+* [poster collage](core/poster/collage/README.md)
