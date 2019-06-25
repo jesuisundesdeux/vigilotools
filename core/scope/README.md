@@ -20,7 +20,8 @@ Commands:
 
 ```
 vgtool scope list
-| Scope Id             | Scope name                       |
+
+| Scope ID             | Scope name                       |
 |----------------------+----------------------------------|
 | 13_aixmarseillemetro | Aix Marseille Provence Metropole |
 | be_mons              | Belgique - Mons (beta)           |
@@ -38,8 +39,10 @@ vgtool scope list
 ### show
 
 ```
+vgtool scope show --scope 34_montpellier
+
 ╒════════════════╤══════════════╤═══════════╤═══════════╤════════════════════════════════════════╕
-│ Scope Id       │ Scope name   │ Country   │ In prod   │ API                                    │
+│ Scope ID       │ Scope name   │ Country   │ In prod   │ API                                    │
 ╞════════════════╪══════════════╪═══════════╪═══════════╪════════════════════════════════════════╡
 │ 34_montpellier │ Montpellier  │ France    │ X         │ https://api-vigilo.jesuisundesdeux.org │
 ╘════════════════╧══════════════╧═══════════╧═══════════╧════════════════════════════════════════╛
