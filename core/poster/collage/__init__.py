@@ -238,20 +238,20 @@ class Collage():
                     d = ImageDraw.Draw(img)
                     font = ImageFont.truetype(
                         f'Cantarell-Regular.otf', self.img_text_options['size'])
-                    imgtextheight = 42
+
+                    twidth, theight = d.textsize(
+                        self.img_text_options['text'].format(**issue), font=font)
 
                     if self.img_text_options['background'] != "":
                         color = ImageColor.getrgb(
                             self.img_text_options['background'])
                         d.rectangle(
-                            ((0, img.size[1]-imgtextheight), (img.size[0], img.size[1])), fill=color, outline=color, width=8)
+                            ((0, img.size[1]-theight-(2*self.img_text_options['margin'])), (img.size[0], img.size[1])), fill=color, outline=color, width=8)
 
-                    twidth, theight = d.textsize(
-                        self.img_text_options['text'].format(**issue))
                     if twidth < img.size[0]:
                         color = ImageColor.getrgb(
                             self.img_text_options['color'])
-                        d.text(((img.size[0]-twidth)/2, img.size[1]-imgtextheight+int((imgtextheight-theight)/2)), self.img_text_options['text'].format(**issue),
+                        d.text(((img.size[0]-twidth)/2, img.size[1]-theight-self.img_text_options['margin']), self.img_text_options['text'].format(**issue),
                                font=font, fill=color)
 
                     if collage_image:
@@ -333,7 +333,7 @@ def cli():
               show_default=True)
 @click.option('--img-text', '--it', default="", help='Text for all images: Ex: "date: {datetime}"',
               show_default=True)
-@click.option('--img-textmargin', '--im', default=10, help='Img text margin',
+@click.option('--img-textmargin', '--im', default=3, help='Img text margin',
               show_default=True)
 @click.option('--img-textsize', '--is', default=16, help='Img text size',
               show_default=True)
