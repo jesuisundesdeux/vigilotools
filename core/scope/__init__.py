@@ -48,7 +48,6 @@ def show(scope):
                 'X' if scopes[key]['prod'] else '',
                 scopes[key]['api_path'].replace('%3A%2F%2F', '://')
             ]]
-        # list_scopes.append([scopes[key]['scope'], key])
 
     header = ['Scope ID', 'Scope name', 'Country', 'In prod', 'API']
     print(tabulate(show_scope, headers=header, tablefmt="fancy_grid"))

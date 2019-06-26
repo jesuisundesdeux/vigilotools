@@ -8,6 +8,23 @@ source .virtualenv/bin/activate
 vgtool scope list
 ```
 
+## Help command
+
+```
+Usage: vgtool [OPTIONS] COMMAND [ARGS]...
+
+  Vigilo command tools
+
+Options:
+  -d, --debug  For debugging
+  --help       Show this message and exit.
+
+Commands:
+  issue   Issues informations
+  poster  Poster generation
+  scope   Scopes informations
+```
+
 ## Sample
 
 ```

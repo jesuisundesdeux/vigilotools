@@ -18,8 +18,10 @@ import urllib.request
 import click
 import geopy
 import geopy.distance
-from PIL import Image, ImageDraw, ImageFont, ImageColor
+from PIL import Image, ImageColor, ImageDraw, ImageFont
 
+import lib.issue
+import lib.scope
 from core.cmd import pass_context
 
 CATEGORY = 2
@@ -52,26 +54,30 @@ class Collage():
             'text': ""
         }
         self.scope = None
-        self.limit = None
+        self.issues = []
         self.api_path = None
         self.loaded_issues = None
         self.filtered_issues = None
         self.no_cache = False
-        self.filters = {}
 
     def set_debug(self, debug):
         """Set debug proprety"""
         self.debug = debug
 
+    def set_issues(self, issues):
+        """Set issues proprety"""
+        self.issues = issues
+
     def set_nocache(self, no_cache):
         """Define nocache property"""
         self.no_cache = no_cache
 
-    def set_img_text_options(self, background, color, size, text):
+    def set_img_text_options(self, background, color, margin, size, text):
         """Define img_text options property"""
         self.img_text_options = {
             'background': background,
             'color': color,
+            'margin': margin,
             'size': size,
             'text': text
         }
@@ -88,122 +94,8 @@ class Collage():
     def set_scope(self, scope):
         """Define scope property"""
         self.scope = scope
-        self.api_path = get_scope_information(scope, self.no_cache)['api_path']
-
-    def set_limit(self, limit):
-        """Define limit property"""
-        self.limit = limit
-
-    def get_all_issues(self):
-        """Get all issues from scope"""
-
-        if self.api_path is None:
-            raise Exception("Please define scope")
-
-        cachefile = '/tmp/collage_issues.json'
-        if self.no_cache or not os.path.exists(cachefile):
-            issue_url = f'{self.api_path}/get_issues.php'
-            data = get_url_content(issue_url)
-            self.loaded_issues = json.loads(data)
-
-            for issue in self.loaded_issues:
-                # Add date field
-                issue['timestamp'] = issue['time']
-                dtime = datetime.datetime.fromtimestamp(
-                    int(issue['timestamp']))
-                issue['date'] = dtime.strftime('%Y-%m-%d')
-                issue['time'] = str(dtime.time)
-
-            with open(cachefile, 'w') as jsonfile:
-                json.dump(self.loaded_issues, jsonfile)
-        else:
-            with open(cachefile) as jsonfile:
-                self.loaded_issues = json.load(jsonfile)
-
-        self.filtered_issues = self.loaded_issues[:]
-
-    def get_filtered_issues(self):
-        """Get filter issues(add_by)"""
-        if not self.limit:
-            return self.filtered_issues
-
-        return self.filtered_issues[:self.limit]
-
-    def add_by(self, ftype, values):
-        """ Set add_by property"""
-        self.filters[ftype] = values
-
-    def filter_all(self):
-        """Filters issues with some filters"""
-        self.filtered_issues = []
-        if not self.filters:
-            return
-
-        self.filtered_issues = []
-        for item in self.loaded_issues:
-            count = 0
-            for ftype in self.filters:
-                if getattr(self, f"filter_by_{ftype}")(item):
-                    count += 1
-
-            if count == len(self.filters):
-                self.filtered_issues.append(item)
-
-    def filter_by_address(self, item):
-        """Add by address filter"""
-        ftype = inspect.stack()[0][3].replace('filter_by_', '')
-        if not self.filters[ftype]:
-            return True
-
-        for search in self.filters[ftype]:
-            if search.lower() in item['address'].lower() and item not in self.filtered_issues:
-                return True
-
-        return False
-
-    def filter_by_category(self, item):
-        """Add by category filter"""
-        ftype = inspect.stack()[0][3].replace('filter_by_', '')
-        if not self.filters[ftype]:
-            return True
-
-        for search in self.filters[ftype]:
-            if search == item['categorie'] and item not in self.filtered_issues:
-                return True
-
-        return False
-
-    def filter_by_date(self, item):
-        """Add by date filter"""
-        ftype = inspect.stack()[0][3].replace('filter_by_', '')
-        if not self.filters[ftype]:
-            return True
-
-        for dates in self.filters[ftype]:
-            start, end = dates
-
-            tstart = time.mktime(datetime.datetime.strptime(
-                start, "%Y-%m-%d").timetuple())
-            tend = time.mktime(datetime.datetime.strptime(
-                end, "%Y-%m-%d").timetuple())
-
-            if int(item['timestamp']) >= tstart and int(item['timestamp']) <= tend and item not in self.filtered_issues:
-                return True
-                break
-
-        return False
-
-    def filter_by_token(self, item):
-        """Add by token filter"""
-        ftype = inspect.stack()[0][3].replace('filter_by_', '')
-        if not self.filters[ftype]:
-            return True
-
-        for search in self.filters[ftype]:
-            if search == item['token'] and item not in self.filtered_issues:
-                return True
-
-        return False
+        self.api_path = lib.scope.get_scope_information(scope, self.no_cache)[
+            'api_path']
 
     def download_image(self, token):
         """Download image"""
@@ -215,21 +107,15 @@ class Collage():
             print(photo_url)
             download_url_to_file(photo_url, img_filename)
 
-    def export(self):
-        if not self.get_filtered_issues():
-            return
-
-        print(self.get_filtered_issues())
-
     def generate(self, width, outputname):
         """Generate collage poster"""
 
-        if not self.get_filtered_issues():
+        if not self.issues:
             return
 
         # Download images
         issues = []
-        for issue in self.get_filtered_issues():
+        for issue in self.issues:
             filename = f"/tmp/{issue['token']}.png"
             try:
                 self.download_image(issue['token'])
@@ -352,7 +238,7 @@ class Collage():
                     d = ImageDraw.Draw(img)
                     font = ImageFont.truetype(
                         f'Cantarell-Regular.otf', self.img_text_options['size'])
-                    imgtextheight = 26
+                    imgtextheight = 42
 
                     if self.img_text_options['background'] != "":
                         color = ImageColor.getrgb(
@@ -424,43 +310,9 @@ def get_grid_dimenssion(nb_images):
     return (-1, -1)
 
 
-def get_url_content(url):
-    """Get url content"""
-    response = urllib.request.urlopen(url)
-    data = response.read()
-    text = data.decode('utf-8')
-
-    return text
-
-
 def download_url_to_file(url, filename):
     """Download url to file"""
     urllib.request.urlretrieve(url, filename)
-
-
-def get_scope_information(scopeid, no_cache):
-    """Get scope information with cache support"""
-    cachefile = '/tmp/collage_scope.json'
-    if no_cache or not os.path.exists(cachefile):
-        data = get_url_content(CITYLIST)
-        jcities = json.loads(data)
-
-        jscope = None
-        for key in jcities.keys():
-            if scopeid in jcities[key]['scope']:
-                jcities[key]['api_path'] = jcities[key]['api_path'].replace(
-                    '%3A%2F%2F', '://')
-
-                jscope = jcities[key]
-                break
-
-        with open(cachefile, 'w') as jsonfile:
-            json.dump(jscope, jsonfile)
-    else:
-        with open(cachefile) as jsonfile:
-            jscope = json.load(jsonfile)
-
-    return jscope
 
 
 @click.group()
@@ -475,11 +327,13 @@ def cli():
 # Image options
 @click.option('--width', '--iw', default=2048, help='Width output image',
               show_default=True)
-@click.option('--img-text', '--it', default="", help='Text for all images: Ex: "date: {datetime}"',
-              show_default=True)
 @click.option('--img-background', '--ib', default="", help='Background color image ex: #000000',
               show_default=True)
 @click.option('--img-color', '--ic', default="#FFFFFF", help='Text color image. ex: #FFFFFF',
+              show_default=True)
+@click.option('--img-text', '--it', default="", help='Text for all images: Ex: "date: {datetime}"',
+              show_default=True)
+@click.option('--img-textmargin', '--im', default=10, help='Img text margin',
               show_default=True)
 @click.option('--img-textsize', '--is', default=16, help='Img text size',
               show_default=True)
@@ -493,10 +347,10 @@ def cli():
 @click.option('--title-textsize', '--ts', default=36, help='Title text size',
               show_default=True)
 @click.option('-n', '--no-cache', is_flag=True, help='No cache remote issues file')
-@click.option('-a', '--add-address', multiple=True, help='Add address filter')
-@click.option('-c', '--add-category',  multiple=True, help='Add category filter')
-@click.option('-t', '--add-token', multiple=True, help='Add token filter')
-@click.option('-d', '--add-date', nargs=2, multiple=True, help='Add timestamp filter. Ex: 2019-01-07 2019-01-14', metavar='[START END]')
+@click.option('-a', '--filter-address', multiple=True, help='Add address filter')
+@click.option('-c', '--filter-category',  multiple=True, help='Add category filter')
+@click.option('-t', '--filter-token', multiple=True, help='Add token filter')
+@click.option('-d', '--filter-date', nargs=2, multiple=True, help='Add timestamp filter. Ex: 2019-01-07 2019-01-14', metavar='[START END]')
 @cli.command("all")
 @pass_context
 def generate_all(ctx,
@@ -504,31 +358,53 @@ def generate_all(ctx,
                  output,
                  img_background,
                  img_color,
+                 img_textmargin,
                  img_textsize,
                  img_text,
                  title_background,
                  title_color,
                  title_textsize,
                  title_text,
-                 add_address,
-                 add_category,
-                 add_token,
-                 add_date,
+                 filter_address,
+                 filter_category,
+                 filter_token,
+                 filter_date,
                  width,
                  no_cache,
                  limit
                  ):
     "Generate from all issues"
 
+    # Set issues property
+    cissues = lib.issue.Issues()
+    cissues.set_debug(ctx.debug)
+    cissues.set_scope(scope)
+    cissues.set_nocache(no_cache)
+    cissues.set_limit(limit)
+
+    # Do filter
+    cissues.load_all_issues()
+    cissues.add_filter('address', filter_address)
+    cissues.add_filter('category', filter_category)
+    cissues.add_filter('date', filter_date)
+    cissues.add_filter('token', filter_token)
+    cissues.add_filter('category', filter_category)
+    cissues.do_filters()
+
+    issues = cissues.get_filtered_issues()
+
+    ########
+
     # Collage configuration
     collage = Collage()
     collage.set_debug(ctx.debug)
+    collage.set_issues(issues)
     collage.set_scope(scope)
     collage.set_nocache(no_cache)
-    collage.set_limit(limit)
     collage.set_img_text_options(
         background=img_background,
         color=img_color,
+        margin=img_textmargin,
         size=img_textsize,
         text=img_text
     )
@@ -539,13 +415,4 @@ def generate_all(ctx,
         text=title_text
     )
 
-    # Generate collage
-    collage.get_all_issues()
-    collage.add_by('address', add_address)
-    collage.add_by('category', add_category)
-    collage.add_by('date', add_date)
-    collage.add_by('token', add_token)
-    collage.add_by('category', add_category)
-    collage.filter_all()
     collage.generate(width, output)
-    # collage.export()

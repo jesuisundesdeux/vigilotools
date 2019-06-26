@@ -19,8 +19,6 @@ install: .virtualenv
 dev-tools: .virtualenv
 	${PIP} install -r requirements-dev.txt
 
-generate-poster: .virtualenv
-	.virtualenv/bin/python generate-poster.py
 
 clean: ## Clean some files
 	@-rm -rf .virtualenv

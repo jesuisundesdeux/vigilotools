@@ -7,14 +7,18 @@ CITYLIST = "https://vigilo-bf7f2.firebaseio.com/citylist.json"
 
 
 def get_scope_list(no_cache=False):
+    """Get scope list"""
     cachefile = '/tmp/collage_scope.json'
     if no_cache or not os.path.exists(cachefile):
         data = net.get_url_content(CITYLIST)
         scopes = json.loads(data)
-
         for key in scopes.keys():
             scopes[key]['api_path'] = scopes[key]['api_path'].replace(
                 '%3A%2F%2F', '://')
+
+        with open(cachefile, 'w') as jsonfile:
+            json.dump(scopes, jsonfile)
+
     else:
         with open(cachefile) as jsonfile:
             scopes = json.load(jsonfile)

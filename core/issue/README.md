@@ -1,6 +1,9 @@
-# Scope
+# Issue
 
 ## Help
+
+### list
+
 ```
 Usage: vgtool issue list [OPTIONS]
 
@@ -17,6 +20,32 @@ Options:
   -l, --limit INTEGER            Limit issues  [default: -1]
   -s, --scope TEXT               Scope ID  [required]
   --help                         Show this message and exit.
+```
+
+### show
+
+```
+Usage: vgtool issue show [OPTIONS]
+
+  Show scope informations
+
+Options:
+  -t, --token TEXT  Add token filter
+  -n, --no-cache    No cache remote issues file
+  -f, --field TEXT  Show fields
+  -s, --scope TEXT  Scope ID  [required]
+  --help            Show this message and exit.
+```
+
+### fields
+```
+Usage: vgtool issue fields [OPTIONS]
+
+  Show available issue fields
+
+Options:
+  -s, --scope TEXT  [required]
+  --help            Show this message and exit.
 ```
 
 ##Sample
