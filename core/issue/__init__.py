@@ -15,20 +15,21 @@ from core.cmd import pass_context
 @pass_context
 def cli(ctx):
     """Issues informations"""
-    pass
 
 
 @click.option('-s', '--scope', required=True, help='Scope ID')
 @click.option('-l', '--limit', default=-1, help='Limit issues', show_default=True)
 @click.option('-f', '--field', default=['token', 'date', 'address', 'categorie'], multiple=True, help="Show fields")
-@click.option('-n', '--no-cache', is_flag=True, help='No cache remote issues file')
+@click.option('--no-cache', is_flag=True, help='No cache remote issues file')
 @click.option('-a', '--filter-address', multiple=True, help='Add address filter')
 @click.option('-c', '--filter-category',  multiple=True, help='Add category filter')
 @click.option('-t', '--filter-token', multiple=True, help='Add token filter')
-@click.option('-d', '--filter-date', nargs=2, multiple=True, help='Add timestamp filter. Ex: 2019-01-07 2019-01-14', metavar='[START END]')
+@click.option('-d', '--filter-date', nargs=2, multiple=True, metavar='[START END]', help='Add timestamp filter. Ex: 2019-01-07 2019-01-14')
+@click.option('-n', '--filter-near', multiple=True, metavar='[TOKEN]', help='Add token for searching near observations')
+@click.option('-m', '--max-distance', default=50,  help='max near distance')
 @cli.command("list")
 @pass_context
-def list_cmd(ctx, scope, limit, field, no_cache, filter_address, filter_category, filter_token, filter_date):
+def list_cmd(ctx, scope, limit, field, no_cache, filter_address, filter_category, filter_token, filter_near, max_distance, filter_date):
     """Issues list"""
 
     # Set issues property
@@ -37,6 +38,7 @@ def list_cmd(ctx, scope, limit, field, no_cache, filter_address, filter_category
     cissues.set_scope(scope)
     cissues.set_nocache(no_cache)
     cissues.set_limit(limit)
+    cissues.set_maxdistance(max_distance)
 
     # Do filter
     cissues.load_all_issues()
@@ -44,6 +46,7 @@ def list_cmd(ctx, scope, limit, field, no_cache, filter_address, filter_category
     cissues.add_filter('category', filter_category)
     cissues.add_filter('date', filter_date)
     cissues.add_filter('token', filter_token)
+    cissues.add_filter('near', filter_near)
     cissues.add_filter('category', filter_category)
     cissues.do_filters()
 

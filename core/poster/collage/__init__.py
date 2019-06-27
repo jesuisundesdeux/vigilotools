@@ -30,8 +30,6 @@ DISTANCE = 100000
 MAXPICTURES = 1000
 MAX_SEARCH_ITERATION_RATIO = 10
 
-CITYLIST = "https://vigilo-bf7f2.firebaseio.com/citylist.json"
-
 
 class Collage():
     """

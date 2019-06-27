@@ -10,12 +10,14 @@ Usage: vgtool issue list [OPTIONS]
   Issues list
 
 Options:
+  -m, --max-distance INTEGER     max near distance
+  -n, --filter-near [TOKEN]      Add token for searching near observations
   -d, --filter-date [START END]  Add timestamp filter. Ex: 2019-01-07
                                  2019-01-14
   -t, --filter-token TEXT        Add token filter
   -c, --filter-category TEXT     Add category filter
   -a, --filter-address TEXT      Add address filter
-  -n, --no-cache                 No cache remote issues file
+  --no-cache                     No cache remote issues file
   -f, --field TEXT               Show fields
   -l, --limit INTEGER            Limit issues  [default: -1]
   -s, --scope TEXT               Scope ID  [required]
@@ -80,6 +82,26 @@ vgtool issue list --scope 34_montpellier -f token -f token -f address -f categor
 | 2J95Q3C1 | 2J95Q3C1 | Rue de Salaison, Montpellier           |           4 |
 | AGYG5MCC | AGYG5MCC | Allée Louis Mazas, Montpellier         |           4 |
 | 2JK724G7 | 2JK724G7 | Avenue du Docteur Pezet, Montpellier   |           9 |
+```
+
+```
+vgtool issue list --scope 34_montpellier --filter-near YHOXPPN4 --max-distance 20 --filter-category 2
+
+| token    | date       | address                     |   categorie |
+|----------+------------+-----------------------------+-------------|
+| E12C7548 | 2018-09-22 | Cours Gambetta, Montpellier |           2 |
+| 058ED204 | 2018-09-29 | Cours Gambetta, Montpellier |           2 |
+| ADAFDAFB | 2018-10-03 | Cours Gambetta, Montpellier |           2 |
+| ADGC1M74 | 2019-03-16 | Cours Gambetta, Montpellier |           2 |
+| 0AEO3KJR | 2019-03-16 | Cours Gambetta, Montpellier |           2 |
+| S0NSEGH1 | 2019-03-24 | Cours Gambetta, Montpellier |           2 |
+| JY4ZC0XC | 2019-03-25 | Cours Gambetta, Montpellier |           2 |
+| 8KU167NX | 2019-04-19 | Cours Gambetta, Montpellier |           2 |
+| Q0ELE8GV | 2019-04-20 | Cours Gambetta, Montpellier |           2 |
+| 1NM72MU5 | 2019-04-24 | Cours Gambetta, Montpellier |           2 |
+| CE7JQPHL | 2019-04-28 | Cours Gambetta, Montpellier |           2 |
+| FA69C51C | 2019-05-08 | Cours Gambetta, Montpellier |           2 |
+
 ```
 ### show
 

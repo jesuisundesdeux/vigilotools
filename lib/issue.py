@@ -7,6 +7,9 @@ import json
 import os
 import time
 
+import geopy
+import geopy.distance
+
 import lib.net as net
 import lib.scope
 
@@ -20,6 +23,8 @@ class Issues():
         self.debug = False
         self.scope = None
         self.limit = -1
+        self.max_distance = 50
+        self.near_issues = []
         self.api_path = None
         self.loaded_issues = None
         self.filtered_issues = None
@@ -43,6 +48,10 @@ class Issues():
     def set_limit(self, limit):
         """Define limit property"""
         self.limit = limit
+
+    def set_maxdistance(self, max_distance):
+        """Define max_distance property"""
+        self.max_distance = max_distance
 
     def get_filtered_issues(self):
         """Get filter issues(add_filter)"""
@@ -82,6 +91,9 @@ class Issues():
 
     def do_filters(self):
         """Filters issues with some filters"""
+
+        # Search issue near items
+        self.near_issues = self.search_token(self.filters['near'])
 
         self.filtered_issues = []
         for item in self.loaded_issues:
@@ -149,68 +161,33 @@ class Issues():
 
         return False
 
-    # def download_image(self, token):
-    #     """Download image"""
-    #     img_filename = f"/tmp/{token}.png"
+    def filter_by_near(self, item):
+        """Add by near filter"""
+        ftype = inspect.stack()[0][3].replace('filter_by_', '')
+        if not self.filters[ftype]:
+            return True
 
-    #     if not os.path.exists(img_filename):
-    #         print(f"Download image {token}")
-    #         photo_url = f"{self.api_path}/get_photo.php?token={token}"
-    #         print(photo_url)
-    #         download_url_to_file(photo_url, img_filename)
+        lat = float(item['coordinates_lat'])
+        lon = float(item['coordinates_lon'])
+        geopoint_issue = geopy.Point(lat, lon)
+        for near_issue in self.near_issues:
+            lat = float(near_issue['coordinates_lat'])
+            lon = float(near_issue['coordinates_lon'])
+            geopoint_search = geopy.Point(lat, lon)
 
-    def generate(self, width, outputname):
-        """Generate collage poster"""
+            distance = geopy.distance.distance(
+                geopoint_issue, geopoint_search).m
 
-        if not self.get_filtered_issues():
-            return
+            if distance < self.max_distance:
+                return True
 
-        # Download images
-        issues = []
-        for issue in self.get_filtered_issues():
-            filename = f"/tmp/{issue['token']}.png"
-            try:
-                self.download_image(issue['token'])
+        return False
 
-                # Verify is image not corupted
-                img = Image.open(filename)
-                img.crop((1, 1, 2, 2))
+    def search_token(self, tokens):
+        """Find tokens"""
+        find_tokens = []
+        for item in self.loaded_issues:
+            if item['token'] in tokens:
+                find_tokens.append(item)
 
-                issues.append(issue)
-            except urllib.error.HTTPError:
-                print(f"### ERROR DOWNLOAD {filename}")
-            except OSError:
-                print(f"### IMAGE ERROR {filename}")
-
-        nb_images = len(issues)
-
-        (max_images, nb_cols, _) = search_best_grid_dimension(
-            nb_images, MAX_SEARCH_ITERATION_RATIO)
-
-        selected_issues = issues[:max_images]
-
-        # Generate collage
-        selected_issues.reverse()
-        initial_height = int(width/nb_cols)
-        collage_image = self.make_collage(
-            selected_issues, outputname, width, initial_height)
-
-        if self.title_text_options['text'] == "":
-            collage_image.save(outputname)
-            return
-
-        boxheight = 60
-        color = ImageColor.getrgb(self.title_text_options['background'])
-        newimage = Image.new(
-            'RGB', (collage_image.size[0], collage_image.size[1]+boxheight), color)
-
-        newimage.paste(collage_image, (0, 0))
-        d = ImageDraw.Draw(newimage)
-        font = ImageFont.truetype(
-            f'Cantarell-ExtraBold.otf', self.title_text_options['size'])
-        twidth, _ = d.textsize(self.title_text_options['text'])
-        color = ImageColor.getrgb(self.title_text_options['color'])
-        d.text(((newimage.size[0]-twidth)/2, newimage.size[1]-boxheight+7), self.title_text_options['text'],
-               font=font, fill=color)
-
-        newimage.save(outputname)
+        return find_tokens
