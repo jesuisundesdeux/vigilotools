@@ -25,9 +25,10 @@ def list_cmd():
 
     list_scopes = []
     for key in scopes.keys():
-        list_scopes.append([scopes[key]['scope'], key])
+        list_scopes.append(
+            [scopes[key]['scope'], key,  scopes[key]['contact'], scopes[key]['version']])
 
-    header = ['Scope ID', 'Scope name']
+    header = ['Scope ID', 'Scope name', 'Contact', 'Version']
     print(tabulate(list_scopes, headers=header, tablefmt="orgtbl"))
 
 
@@ -43,11 +44,13 @@ def show(scope):
         if scope == current_scope:
             show_scope = [[
                 scopes[key]['scope'],
+                scopes[key]['version'],
                 key,
                 scopes[key]['country'],
                 'X' if scopes[key]['prod'] else '',
                 scopes[key]['api_path'].replace('%3A%2F%2F', '://')
             ]]
 
-    header = ['Scope ID', 'Scope name', 'Country', 'In prod', 'API']
+    header = ['Scope ID', 'Department',
+              'Scope name', 'Country', 'In prod', 'API']
     print(tabulate(show_scope, headers=header, tablefmt="fancy_grid"))
