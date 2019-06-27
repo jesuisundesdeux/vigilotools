@@ -80,11 +80,12 @@ class Collage():
             'text': text
         }
 
-    def set_title_text_options(self, background, color, size, text):
+    def set_title_text_options(self, background, color, margin, size, text):
         """Define title_text options property"""
         self.title_text_options = {
             'background': background,
             'color': color,
+            'margin': margin,
             'size': size,
             'text': text
         }
@@ -145,18 +146,22 @@ class Collage():
             collage_image.save(outputname)
             return
 
-        boxheight = 60
+        # Title box
+        font = ImageFont.truetype(
+            f'Cantarell-ExtraBold.otf', self.title_text_options['size'])
+        dt = ImageDraw.Draw(collage_image)
+        twidth, theight = dt.textsize(
+            self.title_text_options['text'], font=font)
+        boxheight = theight+(2*self.img_text_options['margin'])
+
         color = ImageColor.getrgb(self.title_text_options['background'])
         newimage = Image.new(
             'RGB', (collage_image.size[0], collage_image.size[1]+boxheight), color)
 
         newimage.paste(collage_image, (0, 0))
-        d = ImageDraw.Draw(newimage)
-        font = ImageFont.truetype(
-            f'Cantarell-ExtraBold.otf', self.title_text_options['size'])
-        twidth, _ = d.textsize(self.title_text_options['text'])
         color = ImageColor.getrgb(self.title_text_options['color'])
-        d.text(((newimage.size[0]-twidth)/2, newimage.size[1]-boxheight+7), self.title_text_options['text'],
+        d = ImageDraw.Draw(newimage)
+        d.text(((newimage.size[0]-twidth)/2, collage_image.size[1]+self.img_text_options['margin']), self.title_text_options['text'],
                font=font, fill=color)
 
         newimage.save(outputname)
@@ -338,6 +343,8 @@ def cli():
 # Title options
 @click.option('--title-text', '--tt', default="", help='Title text',
               show_default=True)
+@click.option('--title-textmargin', '--tm', default=3, help='Title text margin',
+              show_default=True)
 @click.option('--title-background', '--tb', default="#000000", help='Background title color. ex: #000000',
               show_default=True)
 @click.option('--title-color', '--tc', default="#FFFFFF", help='Title text color. ex: #FFFFFF',
@@ -349,28 +356,33 @@ def cli():
 @click.option('-c', '--filter-category',  multiple=True, help='Add category filter')
 @click.option('-t', '--filter-token', multiple=True, help='Add token filter')
 @click.option('-d', '--filter-date', nargs=2, multiple=True, help='Add timestamp filter. Ex: 2019-01-07 2019-01-14', metavar='[START END]')
-@cli.command("all")
+@click.option('-n', '--filter-near', multiple=True, metavar='[TOKEN]', help='Add token for searching near observations')
+@click.option('-m', '--max-distance', default=50,  help='max near distance')
+@cli.command("filter")
 @pass_context
-def generate_all(ctx,
-                 scope,
-                 output,
-                 img_background,
-                 img_color,
-                 img_textmargin,
-                 img_textsize,
-                 img_text,
-                 title_background,
-                 title_color,
-                 title_textsize,
-                 title_text,
-                 filter_address,
-                 filter_category,
-                 filter_token,
-                 filter_date,
-                 width,
-                 no_cache,
-                 limit
-                 ):
+def generate_filter(ctx,
+                    scope,
+                    output,
+                    img_background,
+                    img_color,
+                    img_textmargin,
+                    img_textsize,
+                    img_text,
+                    title_background,
+                    title_color,
+                    title_textmargin,
+                    title_textsize,
+                    title_text,
+                    filter_address,
+                    filter_category,
+                    filter_token,
+                    filter_date,
+                    filter_near,
+                    max_distance,
+                    width,
+                    no_cache,
+                    limit
+                    ):
     "Generate from all issues"
 
     # Set issues property
@@ -379,6 +391,7 @@ def generate_all(ctx,
     cissues.set_scope(scope)
     cissues.set_nocache(no_cache)
     cissues.set_limit(limit)
+    cissues.set_maxdistance(max_distance)
 
     # Do filter
     cissues.load_all_issues()
@@ -386,6 +399,7 @@ def generate_all(ctx,
     cissues.add_filter('category', filter_category)
     cissues.add_filter('date', filter_date)
     cissues.add_filter('token', filter_token)
+    cissues.add_filter('near', filter_near)
     cissues.add_filter('category', filter_category)
     cissues.do_filters()
 
@@ -409,6 +423,7 @@ def generate_all(ctx,
     collage.set_title_text_options(
         background=title_background,
         color=title_color,
+        margin=title_textmargin,
         size=title_textsize,
         text=title_text
     )

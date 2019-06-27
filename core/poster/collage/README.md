@@ -2,7 +2,7 @@
 
 **Help**
 ```
-Usage: vgtool poster collage all [OPTIONS]
+Usage: vgtool poster collage filter [OPTIONS]
 
   Generate from all issues
 
@@ -36,7 +36,7 @@ Options:
 
 **Sample**
 ```
-vgtool poster collage all \
+vgtool poster collage filter \
 --scope 34_montpellier \
 --filter-date 2019-01-01 2019-06-30 \
 --filter-address lodève \
@@ -45,7 +45,7 @@ vgtool poster collage all \
 ```
 
 ```
-vgtool poster collage all \
+vgtool poster collage filter \
 --scope 34_montpellier \
 --filter-token 8B86608G \
 --filter-token 6QB0MJS1 \

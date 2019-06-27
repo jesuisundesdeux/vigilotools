@@ -85,7 +85,7 @@ vgtool issue list --scope 34_montpellier -f token -f token -f address -f categor
 ```
 
 ```
-vgtool issue list --scope 34_montpellier --filter-near YHOXPPN4 --max-distance 20 --filter-category 2
+vgtool issue list --scope 34_montpellier --max-distance 20 --filter-category 2 --filter-near ADAFDAFB
 
 | token    | date       | address                     |   categorie |
 |----------+------------+-----------------------------+-------------|
@@ -101,6 +101,8 @@ vgtool issue list --scope 34_montpellier --filter-near YHOXPPN4 --max-distance 2
 | 1NM72MU5 | 2019-04-24 | Cours Gambetta, Montpellier |           2 |
 | CE7JQPHL | 2019-04-28 | Cours Gambetta, Montpellier |           2 |
 | FA69C51C | 2019-05-08 | Cours Gambetta, Montpellier |           2 |
+| LITKTQE9 | 2019-05-10 | Cours Gambetta, Montpellier |           2 |
+
 
 ```
 ### show
