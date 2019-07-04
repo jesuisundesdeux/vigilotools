@@ -140,3 +140,18 @@ vgtool issue list --scope 34_montpellier -f address --filter-category 2 | tr '|'
   23   Rue Marioge, Montpellier
   23   Rue d'Alco, Montpellier
 ```
+
+```
+vgtool issue list -s 34_montpellier -f coordinates_lat -f coordinates_lon --filter-category 2 -l 10 | awk '{print "[" $2 "," $4 "],"}'
+
+[43.6101,3.86681],
+[43.6018,3.85284],
+[43.6017,3.85259],
+[43.6151,3.88124],
+[43.615,3.8812],
+[43.616,3.88076],
+[43.6124,3.84546],
+[43.6062,3.8674],
+[43.6066,3.8672],
+[43.6057,3.87859],
+```

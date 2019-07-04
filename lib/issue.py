@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-import os
+# -*- coding: utf-8 -*-
 
 import datetime
 import inspect
@@ -74,10 +74,8 @@ class Issues():
                 issue['timestamp'] = issue['time']
                 dtime = datetime.datetime.fromtimestamp(
                     int(issue['timestamp']))
-                print(issue['time'])
-                print(dtime)
                 issue['date'] = dtime.strftime('%Y-%m-%d')
-                issue['time'] = dtime.strftime('%H:%M:%S')
+                issue['time'] = dtime.strftime('%H:%M')
 
             with open(cachefile, 'w') as ofile:
                 json.dump(self.loaded_issues, ofile)
