@@ -21,15 +21,18 @@ def cli(ctx):
 @click.option('-l', '--limit', default=-1, help='Limit issues', show_default=True)
 @click.option('-f', '--field', default=['token', 'date', 'address', 'categorie'], multiple=True, help="Show fields")
 @click.option('--no-cache', is_flag=True, help='No cache remote issues file')
-@click.option('-a', '--filter-address', multiple=True, help='Add address filter')
-@click.option('-c', '--filter-category',  multiple=True, help='Add category filter')
-@click.option('-t', '--filter-token', multiple=True, help='Add token filter')
-@click.option('-d', '--filter-date', nargs=2, multiple=True, metavar='[START END]', help='Add timestamp filter. Ex: 2019-01-07 2019-01-14')
-@click.option('-n', '--filter-near', multiple=True, metavar='[TOKEN]', help='Add token for searching near observations')
-@click.option('-m', '--max-distance', default=50,  help='max near distance')
+@click.option('--filter-address', '--fa', multiple=True, help='Add address filter')
+@click.option('--filter-category', '--fc',  multiple=True, help='Add category filter')
+@click.option('--filter-token', '--ft', multiple=True, help='Add token filter')
+@click.option('--filter-date', '--fd', nargs=2, multiple=True, metavar='[START END]', help='Add timestamp filter. Ex: 2019-01-07 2019-01-14')
+@click.option('--filter-near', '--fn', multiple=True, metavar='[TOKEN]', help='Add token for searching near observations')
+@click.option('--filter-string', '--fs', multiple=True, help='Add string for searching near observations')
+@click.option('--max-distance', default=50, help='max near distance')
 @cli.command("list")
 @pass_context
-def list_cmd(ctx, scope, limit, field, no_cache, filter_address, filter_category, filter_token, filter_near, max_distance, filter_date):
+def list_cmd(ctx, scope, limit, field, no_cache, filter_address,
+             filter_category, filter_token, filter_near, filter_string,
+             max_distance, filter_date):
     """Issues list"""
 
     # Set issues property
@@ -44,10 +47,10 @@ def list_cmd(ctx, scope, limit, field, no_cache, filter_address, filter_category
     cissues.load_all_issues()
     cissues.add_filter('address', filter_address)
     cissues.add_filter('category', filter_category)
-    cissues.add_filter('date', filter_date)
     cissues.add_filter('token', filter_token)
+    cissues.add_filter('date', filter_date)
     cissues.add_filter('near', filter_near)
-    cissues.add_filter('category', filter_category)
+    cissues.add_filter('string', filter_string)
     cissues.do_filters()
 
     issues = cissues.get_filtered_issues()
@@ -102,11 +105,8 @@ def fields(ctx, scope):
     cissues.set_scope(scope)
     cissues.set_nocache(False)
     cissues.set_limit(1)
-
-    # Do filter
     cissues.load_all_issues()
-    issues = cissues.get_filtered_issues()
+    issues = cissues.get_field_names()
 
-    if len(issues) > 0:
-        for field in issues[0]:
-            print(f'{field}')
+    for field in issues:
+        print(field)

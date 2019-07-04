@@ -10,18 +10,20 @@ Usage: vgtool issue list [OPTIONS]
   Issues list
 
 Options:
-  -m, --max-distance INTEGER     max near distance
-  -n, --filter-near [TOKEN]      Add token for searching near observations
-  -d, --filter-date [START END]  Add timestamp filter. Ex: 2019-01-07
-                                 2019-01-14
-  -t, --filter-token TEXT        Add token filter
-  -c, --filter-category TEXT     Add category filter
-  -a, --filter-address TEXT      Add address filter
-  --no-cache                     No cache remote issues file
-  -f, --field TEXT               Show fields
-  -l, --limit INTEGER            Limit issues  [default: -1]
-  -s, --scope TEXT               Scope ID  [required]
-  --help                         Show this message and exit.
+  --max-distance INTEGER          max near distance
+  --filter-string, --fs TEXT      Add string for searching near observations
+  --filter-near, --fn [TOKEN]     Add token for searching near observations
+  --filter-date, --fd [START END]
+                                  Add timestamp filter. Ex: 2019-01-07
+                                  2019-01-14
+  --filter-token, --ft TEXT       Add token filter
+  --filter-category, --fc TEXT    Add category filter
+  --filter-address, --fa TEXT     Add address filter
+  --no-cache                      No cache remote issues file
+  -f, --field TEXT                Show fields
+  -l, --limit INTEGER             Limit issues  [default: -1]
+  -s, --scope TEXT                Scope ID  [required]
+  --help                          Show this message and exit.
 ```
 
 ### show
@@ -155,3 +157,19 @@ vgtool issue list -s 34_montpellier -f coordinates_lat -f coordinates_lon --filt
 [43.6066,3.8672],
 [43.6057,3.87859],
 ```
+
+```
+vgtool issue list -s 34_montpellier -f token -f date -f address -f comment  --filter-string "stop"
+
+| token    | date       | address                                         | comment                                                                                        |
+|----------+------------+-------------------------------------------------+------------------------------------------------------------------------------------------------|
+| A6KL9NK4 | 2018-12-14 | Rue de la Vieille Poste, Montpellier            | Stop qui croise passage piéton et piste cyclable                                               |
+| GVP86RUX | 2019-04-07 | Avenue Marcel Pagnol, Pérols                    | ôter stop velo. impasse a deja stop                                                            |
+| Z0Z3XCD4 | 2019-04-10 | Avenue Masséna, Montpellier                     | GCUM récurrent qui en plus gêne la vue pr le stop                                              |
+| GC6ZM3KP | 2019-04-12 | Rue de Barcelone, Montpellier                   | stop jamais respecté                                                                           |
+| 4H6YC0O4 | 2019-04-13 | Boulevard des Arceaux, Montpellier              | gcum du stop                                                                                   |
+| P0BBZWS7 | 2019-04-16 | Rue de Jausserand, Montpellier                  | stop après piste cyclable en bas d'une côte                                                    |
+| 6D3HKT5B | 2019-05-18 | Rue Fontenille, Montpellier                     | gcum du marché devant le stop                                                                  |
+| 6306IADN | 2019-05-25 | Boulevard des Arceaux, Montpellier              | gcum du marché au stop                                                                         |
+| SQ18J069 | 2019-05-28 | Avenue du Maréchal Leclerc, Montpellier         | Les voitures grillent le stop de la rue de la Manade pour les vélos arrivant de Prés d'Arènes. |
+| F1S85VYZ | 2019-06-24 | Rue du Pas du Loup, Montpellier                 | stop la BC, pour aller discutailler au garage

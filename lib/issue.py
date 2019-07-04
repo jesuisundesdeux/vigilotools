@@ -27,6 +27,7 @@ class Issues():
         self.near_issues = []
         self.api_path = None
         self.loaded_issues = None
+        self.field_names = []
         self.filtered_issues = None
         self.no_cache = False
         self.filters = {}
@@ -84,6 +85,7 @@ class Issues():
                 self.loaded_issues = json.load(jsonfile)
 
         self.filtered_issues = self.loaded_issues[:]
+        self.field_names = self.get_field_names()
 
     def add_filter(self, ftype, values):
         """ Set add_by property"""
@@ -114,6 +116,19 @@ class Issues():
         for search in self.filters[ftype]:
             if search.lower() in item['address'].lower() and item not in self.filtered_issues:
                 return True
+
+        return False
+
+    def filter_by_string(self, item):
+        """Add by address filter"""
+        ftype = inspect.stack()[0][3].replace('filter_by_', '')
+        if not self.filters[ftype]:
+            return True
+
+        for search in self.filters[ftype]:
+            for field in ['comment', 'explanation']:
+                if search.lower() in str(item[field]).lower() and item not in self.filtered_issues:
+                    return True
 
         return False
 
@@ -191,3 +206,12 @@ class Issues():
                 find_tokens.append(item)
 
         return find_tokens
+
+    def get_field_names(self):
+        """Return fields list"""
+        fields = []
+        if self.loaded_issues:
+            for field in self.loaded_issues[0]:
+                fields.append(field)
+
+        return sorted(fields)
