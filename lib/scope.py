@@ -1,53 +1,64 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import re
-import os
 import json
+import os
+import re
+
+import pandas as pd
+
 import lib.net as net
+
 CITYLIST = "https://vigilo-bf7f2.firebaseio.com/citylist.json"
 
 
 def get_scope_list(no_cache=False):
     """Get scope list"""
-    cachefile = '/tmp/collage_scope.json'
+    cachefile = '/tmp/scopes_list.csv'
+    df = None
     if no_cache or not os.path.exists(cachefile):
         data = net.get_url_content(CITYLIST)
-        scopes = json.loads(data)
-        for key in scopes.keys():
-            scopes[key]['api_path'] = scopes[key]['api_path'].replace(
-                '%3A%2F%2F', '://')
+        loadedscopes = json.loads(data)
+        scopes = {}
+        ignoredkey = []
+        for key in loadedscopes.keys():
+            try:
+                scopeid = loadedscopes[key]['scope']
+                del loadedscopes[key]['scope']
 
-            # Populate more scope informations
-            data = net.get_url_content(
-                f"{scopes[key]['api_path']}/get_scope.php?scope={scopes[key]['scope']}")
-            scope_more_info = json.loads(data)
+                scopes[scopeid] = loadedscopes[key]
+                scopes[scopeid]['name'] = key
+                scopes[scopeid]['api_path'] = scopes[scopeid]['api_path'].replace(
+                    '%3A%2F%2F', '://')
+                scopes[scopeid]['api_path'] = re.sub(
+                    r"/$", "", scopes[scopeid]['api_path'])
 
-            # Contact
-            scopes[key]['contact'] = scope_more_info['contact_email']
-            scopes[key]['contact'] = "xxxx" + re.sub(
-                r'.*@', '@', scopes[key]['contact'])
+                # Populate more scope informations
+                scopeurl = f"{scopes[scopeid]['api_path']}/get_scope.php?scope={scopeid}"
+                data = net.get_url_content(scopeurl)
+                scope_more_info = json.loads(data)
 
-            scopes[key]['department'] = scope_more_info['department']
-            scopes[key]['version'] = scope_more_info['backend_version'] if scopes[key]['prod'] else 'Beta'
+                # Contact
+                scopes[scopeid]['contact'] = scope_more_info['contact_email']
+                scopes[scopeid]['contact'] = "xxxx" + re.sub(
+                    r'.*@', '@', scopes[scopeid]['contact'])
 
-        with open(cachefile, 'w') as jsonfile:
-            json.dump(scopes, jsonfile)
+                scopes[scopeid]['department'] = scope_more_info['department']
+                scopes[scopeid]['version'] = scope_more_info['backend_version'] if loadedscopes[key]['prod'] else 'Beta'
+            except:
+                print(f"!!! Scope {key} ignored !!!")
+                ignoredkey.append(key)
 
+        for key in ignoredkey:
+            del loadedscopes[key]
+
+        # Convert to pandas dataframe
+        df = pd.DataFrame.from_dict(scopes, orient='index')
+        df.index.names = ['scopeid']
+
+        df.to_csv(cachefile)
     else:
-        with open(cachefile) as jsonfile:
-            scopes = json.load(jsonfile)
+        df = pd.read_csv(filepath_or_buffer=cachefile, index_col="scopeid")
 
-    return scopes
-
-
-def get_scope_information(scopeid, no_cache=False):
-    """Get scope information with cache support"""
-    scopes = get_scope_list(no_cache)
-    scope = None
-    for key in scopes.keys():
-        if scopeid in scopes[key]['scope']:
-            scope = scopes[key]
-            break
-
-    return scope
+    df = df.reindex(sorted(df.columns), axis=1)
+    return df

@@ -19,38 +19,28 @@ def cli(ctx):
 
 
 @cli.command("list")
-def list_cmd():
+@click.option('-s', '--sortby', multiple=True)
+def list_cmd(sortby):
     """Scopes list"""
-    scopes = lib.scope.get_scope_list()
 
-    list_scopes = []
-    for key in scopes.keys():
-        list_scopes.append(
-            [scopes[key]['scope'], key,  scopes[key]['contact'], scopes[key]['version']])
+    # If not defined sort parameter
+    if not sortby:
+        sortby = ['scopeid']
 
-    header = ['Scope ID', 'Scope name', 'Contact', 'Version']
-    print(tabulate(list_scopes, headers=header, tablefmt="orgtbl"))
+    # Sort by
+    sortby = list(sortby)
+    df_scopes = lib.scope.get_scope_list()
+
+    df_scopes = df_scopes.sort_values(sortby)
+    df_scopes = df_scopes[['name', 'version']]
+    print(tabulate(df_scopes, headers='keys', tablefmt="orgtbl", showindex=True))
 
 
-@click.option('-s', '--scope', required=True)
+@click.option('-s', '--scope',  multiple=True, required=True)
 @cli.command()
 def show(scope):
     """Show scope informations"""
-    scopes = lib.scope.get_scope_list()
-
-    show_scope = None
-    for key in scopes.keys():
-        current_scope = scopes[key]['scope']
-        if scope == current_scope:
-            show_scope = [[
-                scopes[key]['scope'],
-                scopes[key]['version'],
-                key,
-                scopes[key]['country'],
-                'X' if scopes[key]['prod'] else '',
-                scopes[key]['api_path'].replace('%3A%2F%2F', '://')
-            ]]
-
-    header = ['Scope ID', 'Department',
-              'Scope name', 'Country', 'In prod', 'API']
-    print(tabulate(show_scope, headers=header, tablefmt="fancy_grid"))
+    scopes_list = lib.scope.get_scope_list()
+    scopeinfo = scopes_list.loc[list(scope)]
+    print(tabulate(scopeinfo, headers='keys',
+                   tablefmt="fancy_grid", showindex=True))

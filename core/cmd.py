@@ -30,13 +30,11 @@ class MyCMD(click.MultiCommand):
                 rv.append(dirname)
 
         rv.sort()
+
         return rv
 
     def get_command(self, ctx, name):
-        try:
-            mod = importlib.import_module(f'core.{name}')
-        except ImportError:
-            return
+        mod = importlib.import_module(f'core.{name}')
         return mod.cli
 
 

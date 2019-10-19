@@ -18,6 +18,7 @@ import urllib.request
 import click
 import geopy
 import geopy.distance
+import pandas as pd
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 
 import lib.image
@@ -52,7 +53,7 @@ class Collage():
             'size': 36,
             'text': ""
         }
-        self.scope = None
+        self.scopes = None
         self.issues = []
         self.api_path = None
         self.loaded_issues = None
@@ -91,54 +92,71 @@ class Collage():
             'text': text
         }
 
-    def set_scope(self, scope):
+    def set_scopes(self, scopes):
         """Define scope property"""
-        self.scope = scope
-        self.api_path = lib.scope.get_scope_information(scope, self.no_cache)[
-            'api_path']
+        scopes_list = lib.scope.get_scope_list()
+        self.scopes = scopes_list.loc[list(scopes)]
 
-    def download_image(self, token):
+        # self.scopes_info = {}
+        # scopes_list = lib.scope.get_scope_list()
+
+        # for row in scopes_list.itertuples():
+        #     self.scopes_info[row.Index] = row
+
+    def download_issue_image(self, issue):
         """Download image"""
-        img_filename = f"/tmp/{token}.png"
+        img_filename = f"cache/{issue['scopeid']}_{issue['token']}.png"
 
+        # Download image
         if not os.path.exists(img_filename):
-            print(f"Download image {token}")
-            photo_url = f"{self.api_path}/get_photo.php?token={token}"
+            print(f"Download image {issue['token']}")
+            api_path = self.scopes.loc[issue['scopeid']].api_path
+            photo_url = f"{api_path}/get_photo.php?token={issue['token']}"
             print(photo_url)
             download_url_to_file(photo_url, img_filename)
 
     def generate(self, width, outputname):
         """Generate collage poster"""
 
-        if not self.issues:
+        if self.issues.empty:
             return
 
+        # get scopes
+        self.set_scopes(self.issues['scopeid'].unique())
+
+        # Create folder
+        os.makedirs('cache', exist_ok=True)
+
         # Download images
-        issues = []
-        for issue in self.issues:
-            filename = f"/tmp/{issue['token']}.png"
+        tokens = []
+        for idx, issue in self.issues.iterrows():
+            filename = f"cache/{issue['scopeid']}_{issue['token']}.png"
             try:
-                self.download_image(issue['token'])
+                self.download_issue_image(issue)
 
                 # Verify is image not corupted
                 img = Image.open(filename)
                 img.crop((1, 1, 2, 2))
 
-                issues.append(issue)
+                tokens.append(issue['token'])
             except urllib.error.HTTPError:
                 print(f"### ERROR DOWNLOAD {filename}")
             except OSError:
                 print(f"### IMAGE ERROR {filename}")
+
+        self.issues.set_index('token', inplace=True)
+        issues = self.issues.loc[tokens]
 
         nb_images = len(issues)
 
         (max_images, nb_cols, _) = search_best_grid_dimension(
             nb_images, MAX_SEARCH_ITERATION_RATIO)
 
-        selected_issues = issues[:max_images]
+        selected_issues = issues.head(max_images)
+        selected_issues = selected_issues.reset_index()
 
-        # Generate collage
-        selected_issues.reverse()
+        # Reverse order
+        selected_issues = selected_issues.iloc[::-1]
         initial_height = int(width/nb_cols)
         collage_image = lib.image.make_collage(
             selected_issues,  self.img_text_options, width, initial_height)
@@ -226,10 +244,9 @@ def cli():
     """Multiples photos collage"""
 
 
-@click.option('-s', '--scope', required=True, help='Scope ID')
-@click.option('-l', '--limit', default=100, help='Limit issues', show_default=True)
 @click.option('-o', '--output', default='/tmp/collage.jpg', help='Output filename',
               show_default=True)
+@click.option('-i', '--ifile', '--import', default="", help="Export CSV", show_default=True)
 # Image options
 @click.option('--width', '--iw', default=2048, help='Width output image',
               show_default=True)
@@ -254,17 +271,10 @@ def cli():
               show_default=True)
 @click.option('--title-textsize', '--ts', default=36, help='Title text size',
               show_default=True)
-@click.option('-n', '--no-cache', is_flag=True, help='No cache remote issues file')
-@click.option('-a', '--filter-address', multiple=True, help='Add address filter')
-@click.option('-c', '--filter-category',  multiple=True, help='Add category filter')
-@click.option('-t', '--filter-token', multiple=True, help='Add token filter')
-@click.option('-d', '--filter-date', nargs=2, multiple=True, help='Add timestamp filter. Ex: 2019-01-07 2019-01-14', metavar='[START END]')
-@click.option('-n', '--filter-near', multiple=True, metavar='[TOKEN]', help='Add token for searching near observations')
-@click.option('-m', '--max-distance', default=50,  help='max near distance')
-@cli.command("filter")
+@cli.command("generate")
 @pass_context
 def generate_filter(ctx,
-                    scope,
+                    ifile,
                     output,
                     img_background,
                     img_color,
@@ -276,46 +286,17 @@ def generate_filter(ctx,
                     title_textmargin,
                     title_textsize,
                     title_text,
-                    filter_address,
-                    filter_category,
-                    filter_token,
-                    filter_date,
-                    filter_near,
-                    max_distance,
                     width,
-                    no_cache,
-                    limit
                     ):
     "Generate from all issues"
 
-    # Set issues property
-    cissues = lib.issue.Issues()
-    cissues.set_debug(ctx.debug)
-    cissues.set_scope(scope)
-    cissues.set_nocache(no_cache)
-    cissues.set_limit(limit)
-    cissues.set_maxdistance(max_distance)
-
-    # Do filter
-    cissues.load_all_issues()
-    cissues.add_filter('address', filter_address)
-    cissues.add_filter('category', filter_category)
-    cissues.add_filter('date', filter_date)
-    cissues.add_filter('token', filter_token)
-    cissues.add_filter('near', filter_near)
-    cissues.add_filter('category', filter_category)
-    cissues.do_filters()
-
-    issues = cissues.get_filtered_issues()
-
+    issues = pd.read_csv(ifile)
     ########
 
     # Collage configuration
     collage = Collage()
     collage.set_debug(ctx.debug)
     collage.set_issues(issues)
-    collage.set_scope(scope)
-    collage.set_nocache(no_cache)
     collage.set_img_text_options(
         background=img_background,
         color=img_color,

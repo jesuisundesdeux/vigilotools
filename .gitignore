@@ -7,3 +7,4 @@ vigilotools.egg-info/
 .vscode
 
 core/template/
+cache

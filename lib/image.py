@@ -1,7 +1,46 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
+
+import dhash
 from PIL import Image, ImageColor, ImageDraw, ImageFont
+from wand.image import Image as wdimage
+
+import lib.file
+import urllib.error
+
+
+def download_vigilo_image(scopeid, token, api_path):
+    img_filename = f"cache/{scopeid}_{token}.png"
+    try:
+        # Download image
+        if not os.path.exists(img_filename):
+            print(f"Download image {token}")
+            photo_url = f"{api_path}/get_photo.php?token={token}"
+            lib.file.download_url_to_file(photo_url, img_filename)
+
+        # Compute dhash checksum
+        compute_dhash(img_filename)
+    except urllib.error.HTTPError:
+        pass
+
+
+def compute_dhash(filename):
+    if not os.path.exists(filename):
+        return ''
+
+    hash_filename = f'{filename}.dhash'
+    if not os.path.exists(hash_filename):
+        with wdimage(filename=filename) as image:
+            print(f"compute dhash for {filename}")
+            row, col = dhash.dhash_row_col(image)
+            dhashresult = (dhash.format_hex(row, col))
+            lib.file.write_content_to_file(dhashresult, hash_filename)
+    else:
+        dhashresult = lib.file.read_content_from_file(hash_filename)
+
+    return dhashresult
 
 
 def make_collage(issues, img_text_options, width, init_height):
@@ -9,7 +48,7 @@ def make_collage(issues, img_text_options, width, init_height):
     """
     Make a collage image with a width equal to `width` from `images`
     """
-    if not issues:
+    if issues.empty:
         print('No images for collage found!')
         return False
 
@@ -17,14 +56,13 @@ def make_collage(issues, img_text_options, width, init_height):
     # run until a suitable arrangement of images is found
     while True:
         # copy images to images_list
-        issues_list = issues[:]
+        issues_list = issues.copy()
         coefs_lines = []
         images_line = []
         x_pos = 0
-        while issues_list:
+        for idx, row in issues_list.iterrows():
             # get first image and resize to `init_height`
-            issue = issues_list.pop(0)
-            img_path = f"/tmp/{issue['token']}.png"
+            img_path = f"cache/{row['scopeid']}_{row['token']}.png"
             img = Image.open(img_path)
             img.thumbnail((width, init_height))
 
@@ -34,7 +72,7 @@ def make_collage(issues, img_text_options, width, init_height):
                 images_line = []
                 x_pos = 0
             x_pos += img.size[0] + margin_size
-            images_line.append(issue)
+            images_line.append((row['token'], row))
 
         # finally add the last line with images
         coefs_lines.append((float(x_pos) / width, images_line))
@@ -65,7 +103,9 @@ def make_collage(issues, img_text_options, width, init_height):
         if imgs_line:
             x_pos = 0
             for issue in imgs_line:
-                img_path = f"/tmp/{issue['token']}.png"
+                token, row = issue
+
+                img_path = f"cache/{row['scopeid']}_{token}.png"
                 img = Image.open(img_path)
                 # if need to enlarge an image - use `resize`, otherwise use `thumbnail`, it's faster
                 k = (init_height / coef) / img.size[1]
@@ -80,8 +120,9 @@ def make_collage(issues, img_text_options, width, init_height):
                 font = ImageFont.truetype(
                     f'Cantarell-Regular.otf', img_text_options['size'])
 
+                rowdict = row.to_dict()
                 twidth, theight = d.textsize(
-                    img_text_options['text'].format(**issue), font=font)
+                    img_text_options['text'].format(**rowdict), font=font)
 
                 if img_text_options['background'] != "":
                     color = ImageColor.getrgb(
@@ -92,7 +133,7 @@ def make_collage(issues, img_text_options, width, init_height):
                 if twidth < img.size[0]:
                     color = ImageColor.getrgb(
                         img_text_options['color'])
-                    d.text(((img.size[0]-twidth)/2, img.size[1]-theight-img_text_options['margin']), img_text_options['text'].format(**issue),
+                    d.text(((img.size[0]-twidth)/2, img.size[1]-theight-img_text_options['margin']), img_text_options['text'].format(**rowdict),
                            font=font, fill=color)
 
                 if collage_image:
