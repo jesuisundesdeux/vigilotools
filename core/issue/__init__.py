@@ -55,6 +55,7 @@ def cli(ctx):
 
 
 @click.option('-s', '--scope', multiple=True, help='[Scope ID ...], use [ALL] for use all scopes')
+@click.option('-b', '--beta', is_flag=True, help='Select also Beta scope')
 @click.option('-h', '--head', default=0, help='head', show_default=True)
 @click.option('-t', '--tail', default=0, help='tail', show_default=True)
 @click.option('-f', '--fields', default="ALL", help="Show fields. [ALL] or fieldsname. ex: token,date,time,address", show_default=True)
@@ -80,7 +81,7 @@ def cli(ctx):
 @click.option('--max-distance', default=50, help='max near distance')
 @cli.command("list")
 @pass_context
-def list_cmd(ctx, scope, fields, verbose, no_cache, ignore_token, filter_address,
+def list_cmd(ctx, scope, beta,fields, verbose, no_cache, ignore_token, filter_address,
              filter_category, filter_token, filter_near, filter_string,
              max_distance, filter_date, sort_by, group_by, group_function, having, reverse, head, tail, exp, imp, populate):
     """Issues list"""
@@ -91,8 +92,9 @@ def list_cmd(ctx, scope, fields, verbose, no_cache, ignore_token, filter_address
     # Set issues property
     cissues = lib.issue.Issues()
     cissues.set_debug(ctx.debug)
-    cissues.set_scopes(scope)
     cissues.set_nocache(no_cache)
+    cissues.set_beta(beta)
+    cissues.set_scopes(scope)
     cissues.set_maxdistance(max_distance)
     cissues.set_sortby(sort_by)
     cissues.set_groupby(group_by)

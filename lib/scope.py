@@ -12,7 +12,7 @@ import lib.net as net
 CITYLIST = "https://vigilo-bf7f2.firebaseio.com/citylist.json"
 
 
-def get_scope_list(no_cache=False):
+def get_scope_list(no_cache=False,beta=False):
     """Get scope list"""
     cachefile = '/tmp/scopes_list.csv'
     df = None
@@ -26,7 +26,7 @@ def get_scope_list(no_cache=False):
                 scopeid = loadedscopes[key]['scope']
                 del loadedscopes[key]['scope']
 
-                # Ignore beta scope (duplicated content with 34_montpellier)
+                # Ignore #montpellier beta instance (duplicated contents with 34_montpellier scope)
                 if scopeid == '00_test':
                     ignoredkey.append(key)
                     continue
@@ -64,6 +64,11 @@ def get_scope_list(no_cache=False):
         df.to_csv(cachefile)
     else:
         df = pd.read_csv(filepath_or_buffer=cachefile, index_col="scopeid")
+
+    # If not Beta, only select prod scope version
+    if not beta:
+        mask = ~df.version.str.contains(pat="Beta", case=False)
+        df = df[mask]
 
     df = df.reindex(sorted(df.columns), axis=1)
     return df

@@ -60,6 +60,7 @@ class Issues():
         self.filtered_issues = {}
         self.field_names = []
         self.no_cache = False
+        self.beta = False
         self.filters = {}
 
     def set_debug(self, debug):
@@ -70,9 +71,13 @@ class Issues():
         """Define nocache property"""
         self.no_cache = no_cache
 
+    def set_beta(self, beta):
+        """Define nocache property"""
+        self.beta = beta
+
     def set_scopes(self, scopes):
         """Define scope property"""
-        self.scopes_list = lib.scope.get_scope_list()
+        self.scopes_list = lib.scope.get_scope_list(no_cache=self.no_cache,beta=self.beta)
 
         # Set scopes or get all scopes
         if len(scopes) == 1 and scopes[0].lower() == "all":
