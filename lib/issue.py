@@ -158,6 +158,7 @@ class Issues():
                     if '%' in func:
                         filtered[name] = filtered[column] / \
                             filtered[column].sum() * 100
+                        filtered[name] = filtered[name].round(2)
 
                 if self.having:
                     havings = self.having.split(',')

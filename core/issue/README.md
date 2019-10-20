@@ -107,22 +107,21 @@ address,api_path,approved,categorie,comment,contact,coordinates_lat,coordinates_
 
 
 **Count entries by scope**
-`vgtool issue list --scope ALL --group-by scopeid --group-function approved:count:count --sort-by count --reverse`
+`vgtool issue list --scope ALL --group-by scopeid --group-function approved:count:count,count:%:% --sort-by count --reverse`
 
 ```
-| scopeid              |   count |
-|----------------------+---------|
-| 00_test              |    3171 |
-| 92_valleesud         |    2927 |
-| 44_nantesmetropole   |    2182 |
-| 13_aixmarseillemetro |     577 |
-| 34_montpellier       |     285 |
-| 10_troyes            |     267 |
-| 26_valence           |     220 |
-| 91_parissaclay       |     105 |
-| be_mons              |      46 |
-| 80_amiens            |      30 |
-| 29_brest             |      20 |
+| scopeid              |   count |     % |
+|----------------------+---------+-------|
+| 34_montpellier       |    3469 | 34.63 |
+| 92_valleesud         |    2977 | 29.72 |
+| 44_nantesmetropole   |    2293 | 22.89 |
+| 13_aixmarseillemetro |     583 |  5.82 |
+| 10_troyes            |     267 |  2.67 |
+| 26_valence           |     221 |  2.21 |
+| 91_parissaclay       |     109 |  1.09 |
+| be_mons              |      46 |  0.46 |
+| 80_amiens            |      31 |  0.31 |
+| 29_brest             |      20 |  0.2  |
 ```
 
 **search top address**

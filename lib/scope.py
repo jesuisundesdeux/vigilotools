@@ -26,6 +26,11 @@ def get_scope_list(no_cache=False):
                 scopeid = loadedscopes[key]['scope']
                 del loadedscopes[key]['scope']
 
+                # Ignore beta scope (duplicated content with 34_montpellier)
+                if scopeid == '00_test':
+                    ignoredkey.append(key)
+                    continue
+
                 scopes[scopeid] = loadedscopes[key]
                 scopes[scopeid]['name'] = key
                 scopes[scopeid]['api_path'] = scopes[scopeid]['api_path'].replace(
