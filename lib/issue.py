@@ -242,12 +242,13 @@ class Issues():
                     issue['date'] = dtime.strftime('%Y-%m-%d')
                     issue['month'] = dtime.strftime('%B')
                     issue['monthidx'] = dtime.strftime('%m')
+                    issue['daynumber'] = dtime.strftime('%j')
                     issue['weeknumber'] = dtime.strftime('%V')
                     issue['weekdayidx'] = dtime.strftime('%w')
                     issue['weekday'] = dtime.strftime('%A')
                     issue['year'] = dtime.strftime('%Y')
                     issue['time'] = dtime.strftime('%H:%M')
-                    issue['hour'] = dtime.strftime('%H:00')
+                    issue['hour'] = dtime.strftime('%H')
 
                     # Time
                     timename = ['nuit', 'matin', 'après-midi', 'soirée']
@@ -326,22 +327,35 @@ class Issues():
         # Init mask
         mask = filtered_issues['address'] == ""
 
-        # Search contain text
-        for searchtext in self.filters[ftype]:
-            containoperator = searchtext.find('!') == -1
-            if not containoperator:
-                continue
+        containslist = []
+        notcontainslist = []
 
+        # Prepare filter option (from command line and file)
+        for filteroption in self.filters[ftype]:
+            if 'file:' in filteroption:
+                if filteroption.startswith('!file:'):
+                    cmd,filename,column = filteroption.split(':')
+                    df = pd.read_csv(filename)
+                    notcontainslist.extend(df[column].to_list())
+                else:
+                    cmd,filename,column = filteroption.split(':')
+                    df = pd.read_csv(filename)
+                    containslist.extend(df[column].to_list())
+            else:
+                if filteroption.startswith('!'):
+                    notcontainslist.append(filteroption[1:])
+                else:
+                    containslist.append(filteroption)
+
+
+        # Search contain text
+        for searchtext in containslist:
             mask = mask | filtered_issues.address.str.contains(
                 pat=searchtext, case=False)
 
         # Search not contain text
-        for searchtext in self.filters[ftype]:
-            notcontainoperator = searchtext.find('!') == 0
-            if not notcontainoperator:
-                continue
-
-            searchtext = searchtext[1:]
+        for searchtext in notcontainslist:
+            searchtext = searchtext
             mask = mask & ~filtered_issues.address.str.contains(
                 pat=searchtext, case=False)
 

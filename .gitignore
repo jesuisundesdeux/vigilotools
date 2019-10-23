@@ -8,3 +8,4 @@ vigilotools.egg-info/
 
 core/template/
 cache
+*.csv
