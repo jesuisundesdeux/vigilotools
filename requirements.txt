@@ -10,4 +10,4 @@ Wand==0.5.7
 Pillow==6.0.0
 imutils==0.5.3
 opencv-python==4.1.1.26
-opencv-contrib-python==4.1.1.26
+opencv-contrib-python==4.2.0.32
